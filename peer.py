@@ -23,9 +23,9 @@ ensure_dir(RECEIVE_DIR)
 os.makedirs("keys", exist_ok=True)
 
 if not is_valid_pem_key(PRIVATE_KEY_PATH, is_private=True) or not is_valid_pem_key(PUBLIC_KEY_PATH, is_private=False):
-    print("[*] RSA key missing or invalid. Regenerating...")
+    print("\n[*] RSA key missing or invalid. Regenerating...")
     generate_rsa_key_pair(PRIVATE_KEY_PATH, PUBLIC_KEY_PATH)
-    print("[+] RSA key pair regenerated.")
+    print("\n[+] RSA key pair regenerated.")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--listen-port", type=int, required=True)
@@ -51,6 +51,9 @@ def peer_listener():
                 name_len = int.from_bytes(client_socket.recv(4), 'big')
                 file_name = client_socket.recv(name_len).decode()
 
+                extension = int.from_bytes(client_socket.recv(4), 'big')
+                file_extension = client_socket.recv(extension).decode()
+
                 total_size = int.from_bytes(client_socket.recv(8), 'big')
                 ciphertext = b""
 
@@ -63,11 +66,11 @@ def peer_listener():
                         pbar.update(len(chunk))
 
                 aes_key = decrypt_with_rsa_private_key(encrypted_key, PRIVATE_KEY_PATH)
-                plaintext = decrypt_file_with_aes(ciphertext, aes_key)
+                plaintext = decrypt_file_with_aes(ciphertext, aes_key, file_extension)
 
                 file_path = os.path.join(RECEIVE_DIR, file_name)
                 write_file(file_path, plaintext)
-                print(f"[+] File saved to {file_path}")
+                print(f"\n[+] File saved to {file_path}")
 
                 file_hash = sha256_digest(plaintext)
                 print(f"\n[+] SHA256 Hash: {file_hash}")
@@ -88,9 +91,11 @@ def send_file(file_path, peer_ip, peer_port):
             return
 
         file_name = os.path.basename(file_path)
+        file_extension = os.path.splitext(file_name)[1].lower()
         file_data = read_file(file_path)
+        
         aes_key = generate_aes_key()
-        ciphertext = encrypt_file_with_aes(file_data, aes_key)
+        ciphertext = encrypt_file_with_aes(file_data, aes_key, file_extension)
         encrypted_key = encrypt_with_rsa_public_key(aes_key, PUBLIC_KEY_PATH)
 
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -98,8 +103,13 @@ def send_file(file_path, peer_ip, peer_port):
 
         client_socket.sendall(len(encrypted_key).to_bytes(4, 'big'))
         client_socket.sendall(encrypted_key)
+        
         client_socket.sendall(len(file_name.encode()).to_bytes(4, 'big'))
         client_socket.sendall(file_name.encode())
+        
+        client_socket.sendall(len(file_extension.encode()).to_bytes(4, 'big'))
+        client_socket.sendall(file_extension.encode())
+        
         client_socket.sendall(len(ciphertext).to_bytes(8, 'big'))
 
         with tqdm(total=len(ciphertext), desc=f"Sending {file_name}", unit="B", unit_scale=True) as pbar:
