@@ -1,4 +1,4 @@
-# 🔐 Secure P2P File Sharing System 
+# 🔐 CipherShare - Secure P2P File Sharing System 
 
 A lightweight, secure, and efficient **peer-to-peer (P2P)** file sharing system built in Python. This tool allows two peers to send and receive files directly over a network using **TCP sockets**, with **AES encryption**, **RSA key exchange**, and **zlib compression** to ensure privacy, integrity, and efficiency.
 
