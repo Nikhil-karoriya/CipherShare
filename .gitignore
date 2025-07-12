@@ -1,0 +1,9 @@
+.venv/
+
+received_files/*
+!received_files/.gitkeep
+
+keys/private_key.pem
+
+__pycache__/
+*.pyc
