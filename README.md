@@ -29,6 +29,18 @@ A lightweight, secure, and efficient **peer-to-peer (P2P)** file sharing system 
 
 ---
 
+## 📸 Screenshots
+
+### 📤 Send File Prompt
+
+![Sending](assets/screenshots/client-1.png)
+
+### 🔽 Receiving File with Progress Bar
+
+![Receving](assets/screenshots/client2-rcv.png)
+
+---
+
 ## 🛠️ Project Structure
 
 
