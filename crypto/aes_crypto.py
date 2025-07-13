@@ -11,34 +11,27 @@ SKIP_COMPRESSION_EXTENSIONS = {
 def generate_aes_key():
     return Fernet.generate_key()
 
-def encrypt_file_with_aes(file_data: bytes, aes_key: bytes, file_extension: str) -> bytes:
-   
+def encrypt_chunk_with_aes(chunk: bytes, aes_key: bytes, file_extension: str) -> bytes:
     fernet = Fernet(aes_key)
-
     if file_extension.lower() not in SKIP_COMPRESSION_EXTENSIONS:
         try:
-            file_data = zlib.compress(file_data)
-
+            chunk = zlib.compress(chunk)
         except Exception as e:
-            print(f"[!] Compression failed: {e}")
-    
-    return fernet.encrypt(file_data)
+            print(f"\n[!] Compression failed: {e}")
+            
+    return fernet.encrypt(chunk)
 
-def decrypt_file_with_aes(ciphertext: bytes, aes_key: bytes, file_extension: str) -> bytes:
-   
+def decrypt_chunk_with_aes(chunk: bytes, aes_key: bytes, file_extension: str) -> bytes:
     fernet = Fernet(aes_key)
-
     try:
-        decrypted_data = fernet.decrypt(ciphertext)
-
+        decrypted_data = fernet.decrypt(chunk)
     except Exception as e:
-        raise Exception(f"[!] AES decryption failed: {e}")
+        raise Exception(f"\n[!] AES decryption failed: {e}")
 
     if file_extension.lower() not in SKIP_COMPRESSION_EXTENSIONS:
         try:
             decrypted_data = zlib.decompress(decrypted_data)
-            
         except zlib.error:
-            print("[!] Warning: Failed to decompress — file may not be compressed")
+            print("\n[!] Warning: Failed to decompress — file may not be compressed")
 
     return decrypted_data

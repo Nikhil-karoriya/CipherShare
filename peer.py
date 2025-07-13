@@ -11,19 +11,18 @@ from crypto.rsa_crypto import (
     generate_rsa_key_pair,
     is_valid_pem_key
 )
-from crypto.aes_crypto import generate_aes_key, encrypt_file_with_aes, decrypt_file_with_aes
-from utils.file_utils import read_file, write_file, ensure_dir, sha256_digest, is_valid_ip, is_valid_port
+from crypto.aes_crypto import generate_aes_key, encrypt_chunk_with_aes, decrypt_chunk_with_aes
+from utils.file_utils import ensure_dir, sha256_digest_stream, is_valid_ip, is_valid_port
 
 PRIVATE_KEY_PATH = 'keys/private_key.pem'
 PUBLIC_KEY_PATH = 'keys/public_keys.pem'
 RECEIVE_DIR = 'received_files'
-DEFAULT_PORT = 5001
 
 ensure_dir(RECEIVE_DIR)
-os.makedirs("keys", exist_ok=True)
+ensure_dir("keys")
 
 if not is_valid_pem_key(PRIVATE_KEY_PATH, is_private=True) or not is_valid_pem_key(PUBLIC_KEY_PATH, is_private=False):
-    print("\n[*] RSA key missing or invalid. Regenerating...")
+    print("\n[!] RSA key missing or invalid. Regenerating...")
     generate_rsa_key_pair(PRIVATE_KEY_PATH, PUBLIC_KEY_PATH)
     print("\n[+] RSA key pair regenerated.")
 
@@ -37,12 +36,12 @@ def peer_listener():
     try:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind(('0.0.0.0', LISTEN_PORT))
-        server_socket.listen(5)
+        server_socket.listen(1)
         print(f"\n[+] Listening on port {LISTEN_PORT}...")
 
         while True:
             client_socket, addr = server_socket.accept()
-            print(f"\n[+] Incoming connection from {addr}")
+            print(f"\n\n[+] Incoming connection from {addr}\n")
 
             try:
                 key_size = int.from_bytes(client_socket.recv(4), 'big')
@@ -55,24 +54,30 @@ def peer_listener():
                 file_extension = client_socket.recv(extension).decode()
 
                 total_size = int.from_bytes(client_socket.recv(8), 'big')
-                ciphertext = b""
-
-                with tqdm(total=total_size, desc=f"Receiving {file_name}", unit="B", unit_scale=True) as pbar:
-                    while len(ciphertext) < total_size:
-                        chunk = client_socket.recv(min(4096, total_size - len(ciphertext)))
-                        if not chunk:
-                            break
-                        ciphertext += chunk
-                        pbar.update(len(chunk))
-
+                
                 aes_key = decrypt_with_rsa_private_key(encrypted_key, PRIVATE_KEY_PATH)
-                plaintext = decrypt_file_with_aes(ciphertext, aes_key, file_extension)
 
                 file_path = os.path.join(RECEIVE_DIR, file_name)
-                write_file(file_path, plaintext)
-                print(f"\n[+] File saved to {file_path}")
+                
+                with open(file_path, 'wb') as f_out, tqdm(total=total_size, desc=f"[+] Receiving {file_name}", unit="B", unit_scale=True) as pbar:
+                    received_bytes = 0
+                    while received_bytes < total_size:
+                        chunk_size = int.from_bytes(client_socket.recv(4), 'big')
+                        encrypted_chunk = b""
+                        
+                        while len(encrypted_chunk) < chunk_size:
+                            part = client_socket.recv(chunk_size - len(encrypted_chunk))
+                            if not part:
+                                raise Exception("\n[!] Connection lost during transfer.")
+                            encrypted_chunk += part
 
-                file_hash = sha256_digest(plaintext)
+                        decrypted_chunk = decrypt_chunk_with_aes(encrypted_chunk, aes_key, file_extension)
+                        f_out.write(decrypted_chunk)
+                        received_bytes += len(decrypted_chunk)
+                        pbar.update(len(decrypted_chunk))
+
+                print(f"\n[+] File saved to {file_path}")
+                file_hash = sha256_digest_stream(file_path)
                 print(f"\n[+] SHA256 Hash: {file_hash}")
 
             except Exception as e:
@@ -85,37 +90,38 @@ def peer_listener():
 
 def send_file(file_path, peer_ip, peer_port):
     try:
-    
         if not os.path.isfile(file_path):
             print(f"\n[!] File '{file_path}' does not exist.")
             return
 
         file_name = os.path.basename(file_path)
         file_extension = os.path.splitext(file_name)[1].lower()
-        file_data = read_file(file_path)
-        
+
         aes_key = generate_aes_key()
-        ciphertext = encrypt_file_with_aes(file_data, aes_key, file_extension)
         encrypted_key = encrypt_with_rsa_public_key(aes_key, PUBLIC_KEY_PATH)
+        file_size = os.path.getsize(file_path)
 
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((peer_ip, peer_port))
 
         client_socket.sendall(len(encrypted_key).to_bytes(4, 'big'))
         client_socket.sendall(encrypted_key)
-        
+
         client_socket.sendall(len(file_name.encode()).to_bytes(4, 'big'))
         client_socket.sendall(file_name.encode())
-        
+
         client_socket.sendall(len(file_extension.encode()).to_bytes(4, 'big'))
         client_socket.sendall(file_extension.encode())
-        
-        client_socket.sendall(len(ciphertext).to_bytes(8, 'big'))
 
-        with tqdm(total=len(ciphertext), desc=f"Sending {file_name}", unit="B", unit_scale=True) as pbar:
-            for i in range(0, len(ciphertext), 4096):
-                chunk = ciphertext[i:i+4096]
-                client_socket.sendall(chunk)
+        client_socket.sendall(file_size.to_bytes(8, 'big'))
+        
+        print()
+
+        with open(file_path, 'rb') as f, tqdm(total=file_size, desc=f"[+] Sending {file_name}", unit="B", unit_scale=True) as pbar:
+            for chunk in iter(lambda: f.read(4096), b''):
+                encrypted_chunk = encrypt_chunk_with_aes(chunk, aes_key, file_extension)
+                client_socket.sendall(len(encrypted_chunk).to_bytes(4, 'big'))
+                client_socket.sendall(encrypted_chunk)
                 pbar.update(len(chunk))
 
         print(f"\n[+] File '{file_name}' sent successfully to {peer_ip}:{peer_port}.")
@@ -125,7 +131,6 @@ def send_file(file_path, peer_ip, peer_port):
         print(f"\n[!] Failed to send file: {str(e)}\n{traceback.format_exc()}")
 
 if __name__ == '__main__':
-
     threading.Thread(target=peer_listener, daemon=True).start()
     sleep(1)
 
@@ -146,7 +151,7 @@ if __name__ == '__main__':
 
         else:
             print("\n[INFO] Waiting for incoming transfers.")
-            
+
             user_input = input("\nPress 'e' to exit / 'c' to continue: ").strip().lower()
             if user_input == 'e':
                 print("\n[INFO] Exiting...")

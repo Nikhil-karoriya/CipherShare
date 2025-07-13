@@ -4,6 +4,8 @@ received_files/*
 !received_files/.gitkeep
 
 keys/private_key.pem
+keys/public_keys.pem
+!keys/.gitkeep
 
 __pycache__/
 *.pyc

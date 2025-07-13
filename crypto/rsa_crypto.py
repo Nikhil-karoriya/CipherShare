@@ -25,7 +25,7 @@ def encrypt_with_rsa_public_key(data: bytes, public_key_path: str) -> bytes:
         public_key = serialization.load_pem_public_key(f.read())
 
     if not isinstance(public_key, rsa.RSAPublicKey):
-        raise TypeError("\nThe loaded public key is not an RSA key.")
+        raise TypeError("\n[!] The loaded public key is not an RSA key.")
     
     return public_key.encrypt(
         data,
@@ -38,7 +38,7 @@ def decrypt_with_rsa_private_key(ciphertext: bytes, private_key_path: str) -> by
         private_key = serialization.load_pem_private_key(f.read(), password=None)
 
     if not isinstance(private_key, rsa.RSAPrivateKey):
-        raise TypeError("\nThe loaded private key is not an RSA key.")
+        raise TypeError("\n[!] The loaded private key is not an RSA key.")
     
     return private_key.decrypt(
         ciphertext,
