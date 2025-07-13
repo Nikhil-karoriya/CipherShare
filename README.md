@@ -58,7 +58,7 @@ Files are processed in **streaming chunks (32KB by default)**, meaning only one 
 
 ### 📉 RAM Usage vs File Size
 
-![RAM Graph](assets/ram_usage_vs_file_size.png)
+![RAM Graph](assets/screenshots/ram_usage_vs_file_size.png)
 
 > 🔍 The actual memory usage aligns closely with theoretical predictions.
 
