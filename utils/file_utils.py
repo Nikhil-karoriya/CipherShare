@@ -2,11 +2,13 @@ import os
 import hashlib
 import ipaddress
 
+CHUNK_SIZE = 32 * 1024
+
 def sha256_digest_stream(path: str) -> str:
 
     hasher = hashlib.sha256()
     with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b''):
+        for chunk in iter(lambda: f.read(CHUNK_SIZE), b''):
             hasher.update(chunk)
 
     return hasher.hexdigest()
