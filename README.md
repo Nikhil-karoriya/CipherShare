@@ -1,152 +1,140 @@
-# 🔐 CipherShare - Secure P2P File Sharing System 
+# CipherShare - Secure P2P File Sharing System
 
-A lightweight, secure, and efficient **peer-to-peer (P2P)** file sharing system built in Python. This tool allows two peers to send and receive files directly over a network using **TCP sockets**, with **AES encryption**, **RSA key exchange**, and **zlib compression** to ensure privacy, integrity, and efficiency.
-
----
-
-## 🚀 Features
-
-- 📡 Peer-to-peer architecture (no central server)
-- 🔒 AES (symmetric) encryption for fast and secure file protection
-- 🔑 RSA (asymmetric) encryption for safe AES key exchange
-- 🗜️ Zlib compression to reduce file size before encryption
-- 🧠 Optimized memory usage for large files using chunked transfer
-- 📁 File name and structure preserved on receipt
-- 📊 Real-time progress bar using `tqdm`
-- ✅ IP and port validation using `ipaddress` module
+A lightweight, secure, and efficient **peer-to-peer (P2P)** file sharing system built in Python. This tool allows two peers to send and receive files directly over a network using **TCP sockets**, with **AES encryption**, **RSA key exchange**, and **zlib compression** to ensure privacy, integrity, and performance.
 
 ---
 
-## 🔐 Security
+## Key Features
 
-- **AES**: Fast file encryption (Fernet/AES-128)
-- **RSA**: 2048-bit key pair used to securely encrypt the AES key
-- **Zlib Compression**: Applied before encryption for supported formats
-- **SHA-256**: File integrity check printed after decryption
-
----
-
-## ⚙️ Performance & Optimization
-
-CipherShare is built to **efficiently handle large file transfers** without consuming excessive RAM.
-
-### ✅ Memory Optimization
-
-Files are processed in **streaming chunks (32KB by default)**, meaning only one chunk is loaded into memory at a time — not the entire file. This enables **multi-GB file transfers** while using less than **2 MB of memory** per peer.
-
-### 🚀 Real-World Speed Benchmark
-
-**File Size:** 1.5 GB  
-**Transfer Time:** ⏱️ ~33 seconds  
-**Sender RAM:** ~15.5 MB  
-**Receiver RAM:** ~15.0 MB  
-**Chunk Size:** 32 KB (streamed & encrypted per chunk)
-
-> ✅ Demonstrates CipherShare's ability to securely transfer multi-GB files in under a minute with minimal memory usage.
-
-### 📊 RAM Usage Comparison
-
-| File Size | Unoptimized RAM (Full File in RAM) | Optimized (Chunked 32KB) | Actual RAM Used |
-|-----------|------------------------------------|----------------------------|------------------|
-| 42 MB     | ~105 MB                            | ~15–18 MB                  | ✅ 15.5 MB        |
-| 100 MB    | ~160 MB                            | ~16 MB                     | ✅ 16 MB          |
-| 500 MB    | ~560 MB                            | ~18 MB                     | ✅ 18 MB (est.)   |
-| 1.5 GB    | ~1600 MB                           | ~20 MB                     | ✅ 15 MB          |
-| 2 GB      | ~2100 MB                           | ~23 MB                     | ✅ 17–18 MB (est.)|
+- Peer-to-peer architecture (no central server)
+- AES (symmetric) encryption for fast and secure file protection
+- RSA (asymmetric) encryption for secure AES key exchange
+- Zlib compression to reduce file size before encryption
+- Memory-optimized chunked transfer for large files
+- File name and directory structure preserved on receipt
+- Real-time transfer progress with `tqdm`
+- Robust IP and port validation using the `ipaddress` module
 
 ---
 
-### 📉 RAM Usage vs File Size
+## Security Architecture
 
-![RAM Graph](assets/screenshots/ram_usage_vs_file_size.png)
-
-> 🔍 The actual memory usage aligns closely with theoretical predictions.
-
----
-
-## ⚡ Multi-GB File Transfer
-
-- ✅ Chunk-based streaming supports massive files (tested: **up to 2 GB**)
-- 🧠 Memory usage stays flat (~15MB)
-- 🔐 AES encryption and zlib compression used per chunk
+- **AES-128** via Fernet for fast symmetric encryption
+- **RSA-2048** for secure asymmetric key exchange
+- **Zlib Compression** for pre-encryption size reduction
+- **SHA-256** hashing for integrity verification after decryption
 
 ---
 
-## 📸 Screenshots
+## Performance & Optimization
 
-### 📤 Send File Prompt
+CipherShare is engineered to handle large file transfers over local or remote networks with minimal memory usage.
 
+### Efficient Memory Management
+
+Files are streamed in **32KB chunks**, allowing CipherShare to transfer **multi-GB files** using less than **2 MB of memory** per peer. This chunk-based approach eliminates the need to load full files into RAM.
+
+### Speed Benchmark (1.5 GB file)
+
+- **Transfer Time:** ~33 seconds  
+- **Sender RAM Usage:** ~15.5 MB  
+- **Receiver RAM Usage:** ~15.0 MB  
+- **Encryption:** AES-128 per chunk  
+- **Compression:** Zlib per chunk
+
+> Demonstrates CipherShare's capability to securely transfer large files in under a minute with minimal system overhead.
+
+---
+
+## RAM Usage Comparison
+
+| File Size | Full-Load RAM Usage | CipherShare (Chunked 32KB) | Actual RAM Used |
+|-----------|----------------------|------------------------------|------------------|
+| 42 MB     | ~105 MB              | ~15–18 MB                    | 15.5 MB          |
+| 100 MB    | ~160 MB              | ~16 MB                       | 16 MB            |
+| 500 MB    | ~560 MB              | ~18 MB                       | 18 MB (est.)     |
+| 1.5 GB    | ~1600 MB             | ~20 MB                       | 15 MB            |
+| 2 GB      | ~2100 MB             | ~23 MB                       | 17–18 MB (est.)  |
+
+> Real usage stays within predicted bounds across various file sizes.
+
+---
+
+## Multi-GB File Transfer Capabilities
+
+- Supports files over 2 GB via chunked streaming
+- AES encryption and compression applied per chunk
+- Consistent memory usage regardless of file size
+
+---
+
+## Project Screenshots
+
+### Send File Interface
 ![Sending](assets/screenshots/client-1.png)
 
-### 🔽 Receiving File with Progress Bar
-
-![Receving](assets/screenshots/client2-rcv.png)
+### Receive File Interface
+![Receiving](assets/screenshots/client2-rcv.png)
 
 ---
 
-## 🛠️ Project Structure
-
+## Project Structure
 
 ```
+
 secure-p2p-file-transfer/
 ├── peer.py
-| 
 ├── crypto/
 │ ├── aes_crypto.py
 │ └── rsa_crypto.py
-| 
 ├── utils/
 │ └── file_utils.py
-|
 ├── keys/
-│ ├── private_key.pem     # (Ignored) Generated RSA private key
-│ └── public_keys.pem     # (Ignored) Shared RSA public key
-|
+│ ├── private_key.pem # Ignored (auto-generated)
+│ └── public_keys.pem # Ignored (shared public key)
 ├── received_files/
-| 
 ├── .gitignore
 └── README.md
+
 ```
 
 ---
+## Requirements
 
-## 📦 Requirements
-
-- Python 3.10+
+- Python 3.10 or higher
 - [`cryptography`](https://pypi.org/project/cryptography/)
 - [`tqdm`](https://pypi.org/project/tqdm/)
 
-### 📥 Install dependencies
+### Installation
 
 ```bash
 python -m venv .venv
-source .venv/Scripts/activate        # Windows
+source .venv/Scripts/activate        # For Windows
 # or
-source .venv/bin/activate            # Linux/macOS
+source .venv/bin/activate            # For Linux/macOS
 
 pip install cryptography tqdm
 ```
 
 ---
 
-## 📡 Usage
-
-### 📥 Start a peer to receive files
+## Usage Instructions
+### Start a peer to receive files
 
 ```bash
+Copy
+Edit
 python peer.py --listen-port 5001
 ```
+### Send a file to another peer
 
-### 📤 Send a file to another peer
-You will be prompted:
+You will be prompted for:
 
-```
+```yaml
 Send file (y/n)? y
 Enter file path to send: sample.txt
 Enter receiver's IP address: 192.168.1.10
 Enter receiver's port: 5001
 ```
 
-- The file will be compressed, encrypted, transferred securely, and the sender and recipient will see a progress bar and confirmation.
-
----
+The file will be compressed, encrypted, securely transferred, and saved at the recipient’s end with a real-time progress bar and confirmation.
